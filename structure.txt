@@ -1,9 +1,0 @@
-tree_sha1_scanner/
-├── Cargo.toml
-└── src/
-    ├── app.rs
-    ├── crypto.rs
-    ├── main.rs
-    ├── reports.rs
-    └── utils.rs
-

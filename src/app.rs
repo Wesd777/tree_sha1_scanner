@@ -1,0 +1,101 @@
+use std::collections::{HashMap, HashSet};
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
+use walkdir::WalkDir;
+use rayon::prelude::*;
+
+use crate::crypto::compute_sha1;
+use crate::utils::get_unique_filename;
+use crate::reports::{generate_tree_output, generate_tsv_output, generate_dupes_output};
+
+pub fn run(target_dir: &Path, output_dir: Option<&Path>) -> io::Result<()> {
+    let media_extensions: HashSet<&str> = [
+        "jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", // Images
+        "mp4", "mkv", "avi", "mov", "flv", "wmv", "webm",   // Videos
+        "mp3", "wav", "flac", "ogg", "m4a", "aac",          // Audio
+    ].iter().cloned().collect();
+
+    let dir_name = target_dir
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "root".to_string());
+
+    println!("Scanning directory and indexing files...");
+    
+    let files: Vec<PathBuf> = WalkDir::new(target_dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            if e.path().is_file() {
+                if let Some(ext) = e.path().extension().and_then(|s| s.to_str()) {
+                    return media_extensions.contains(ext.to_lowercase().as_str());
+                }
+            }
+            false
+        })
+        .map(|e| e.path().to_path_buf())
+        .collect();
+
+    println!("Starting parallel hashing on {} files...", files.len());
+
+    let sha_map_mutex = Mutex::new(HashMap::<String, Vec<PathBuf>>::new());
+    let file_count = Arc::new(AtomicUsize::new(0));
+    let is_running = Arc::new(AtomicBool::new(true));
+
+    let ui_file_count = Arc::clone(&file_count);
+    let ui_is_running = Arc::clone(&is_running);
+    let ui_handle = thread::spawn(move || {
+        let spinner_frames = ['-', '\\', '|', '/'];
+        let mut frame_idx = 0;
+
+        while ui_is_running.load(Ordering::Relaxed) {
+            let current_count = ui_file_count.load(Ordering::Relaxed);
+            let spinner_char = spinner_frames[frame_idx % spinner_frames.len()];
+            
+            print!("\rFiles processed: {} {}", current_count, spinner_char);
+            let _ = io::stdout().flush();
+            
+            frame_idx += 1;
+            thread::sleep(Duration::from_millis(250));
+        }
+    });
+
+    files.par_iter().for_each(|path| {
+        if let Ok(sha1_hex) = compute_sha1(path) {
+            let mut map = sha_map_mutex.lock().unwrap();
+            map.entry(sha1_hex).or_default().push(path.clone());
+            file_count.fetch_add(1, Ordering::Relaxed);
+        }
+    });
+
+    is_running.store(false, Ordering::Relaxed);
+    let _ = ui_handle.join();
+
+    print!("\r                                           ");
+    let sha_map = sha_map_mutex.into_inner().unwrap();
+    let total_processed = file_count.load(Ordering::Relaxed);
+    println!("\rScan complete! Total files processed: {}", total_processed);
+
+    // Compute unique filenames while mitigating OS namespace collisions
+    let tree_filename = get_unique_filename(output_dir, &dir_name, "tree_output", "txt");
+    let tsv_filename = get_unique_filename(output_dir, &dir_name, "output", "csv");
+    let dupes_filename = get_unique_filename(output_dir, &dir_name, "DupesQ", "txt");
+
+    println!("Generating report files...");
+
+    generate_tree_output(target_dir, &sha_map, &tree_filename)?;
+    generate_tsv_output(&sha_map, &tsv_filename)?;
+    generate_dupes_output(&sha_map, &dupes_filename)?;
+
+    println!("\nAll operations completed successfully:");
+    println!(" -> Tree layout: {}", tree_filename.display());
+    println!(" -> TSV Registry: {}", tsv_filename.display());
+    println!(" -> Duplicates:  {}", dupes_filename.display());
+
+    Ok(())
+}
+

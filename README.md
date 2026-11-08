@@ -3,10 +3,10 @@
 A command-line Rust tool to traverse directories, discover duplicate files, and generate structured layout trees and logs.
 
 ## Features
-* ⚡ **Byte-Size Prefiltering:** Scans and indexes file sizes from system metadata instantly, executing heavy SHA-1 hashing calculations *only* on files with matching byte sizes.
+* ⚡ **Byte-Size Prefiltering:** Scans and indexes file sizes from system metadata instantly, executing  SHA-1 hashing calculations *only* on files with matching byte sizes.
 * 🛡️ **Resource-Aware Throttling:** Automatically balances system stability by scaling onto all available CPU cores minus 2 (Moderate Profile) by default, keeping your operating system responsive during operations.
 * 🔢 **Rotational Logs:** Automatically indexes filenames sequentially (e.g., `_1.txt`, `_2.txt`), preventing unintended folder namespace overwrites.
-* 🗂️ **Clustered Outputs:** Generates structured reports ordered by file directory hierarchies and groups detected duplicates together by size.
+* 🗂️ **Clustered Outputs:** Generates reports ordered by file directory hierarchies and groups detected duplicates together by size.
 
 ## Installation 
 Ensure you have the Rust toolchain installed. Clone this repository and compile the release binary:
@@ -41,10 +41,10 @@ cargo run --release -- --help
 * `    --min` — *Optional.* Forces execution into a single-threaded minimum performance mode.
 
 ## Generated Output Profiles
-Processes target file hierarchies into up to three unique plain text profiles inside your designated output folder:
+Processes target directory tree into up to three unique plain text profiles inside your designated output folder:
 
 1. **`<Folder>_tree_output_#.txt`**
-   A structured plain text directory architecture hierarchy layout mapping duplicate `filename : sha1` values.
+   A structured plain text directory hierarchy layout mapping duplicate `filename : sha1` values.
 2. **`<Folder>_output_#.csv`**
    A tab-separated log linking file paths directly to their SHA-1 signatures. *This file is automatically suppressed and skipped if zero duplicate items are found.*
 3. **`<Folder>_DupesQ_#.txt`**

@@ -5,7 +5,11 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 /// Builds a structured plain text tree where lines use the format: filename : sha1
-pub fn generate_tree_output(root: &Path, sha_map: &HashMap<String, Vec<PathBuf>>, output_path: &Path) -> io::Result<()> {
+pub fn generate_tree_output(
+    root: &Path,
+    sha_map: &HashMap<String, Vec<PathBuf>>,
+    output_path: &Path,
+) -> io::Result<()> {
     let mut path_to_sha: HashMap<&Path, &str> = HashMap::new();
     for (sha, paths) in sha_map {
         for path in paths {
@@ -27,7 +31,10 @@ pub fn generate_tree_output(root: &Path, sha_map: &HashMap<String, Vec<PathBuf>>
         let path = entry.path();
         let depth = entry.depth();
         let indent = " ".repeat(depth * 2);
-        let name = path.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy())
+            .unwrap_or_default();
 
         if path.is_dir() {
             writeln!(output, "{}{}/", indent, name)?;
@@ -38,29 +45,38 @@ pub fn generate_tree_output(root: &Path, sha_map: &HashMap<String, Vec<PathBuf>>
     Ok(())
 }
 
-/// Generates a clean, tab-separated table matching paths to hashes sorted by file paths
-pub fn generate_tsv_output(sha_map: &HashMap<String, Vec<PathBuf>>, output_path: &Path) -> io::Result<()> {
+/// Generates a clean, tab-separated table grouped by matching duplicate sets, largest first
+pub fn generate_tsv_output(
+    sha_map: &HashMap<String, Vec<PathBuf>>,
+    output_path: &Path,
+) -> io::Result<()> {
     let mut output = File::create(output_path)?;
 
     writeln!(output, "File Path\tSHA1")?;
 
-    let mut sorted_entries: Vec<(&PathBuf, &String)> = Vec::new();
-    for (sha, paths) in sha_map {
-        for path in paths {
-            sorted_entries.push((path, sha));
+    // Collect into groups to sort by duplicate cluster size
+    let mut grouped_entries: Vec<(&String, &Vec<PathBuf>)> = sha_map.iter().collect();
+
+    // Sort descending by vector length (largest duplicate group at the top)
+    grouped_entries.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+
+    for (sha, paths) in grouped_entries {
+        // Create a copy of paths within the group and sort them alphabetically
+        let mut sorted_paths = paths.clone();
+        sorted_paths.sort();
+
+        for path in sorted_paths {
+            writeln!(output, "{}\t{}", path.display(), sha)?;
         }
-    }
-
-    sorted_entries.sort_by(|a, b| a.0.cmp(b.0));
-
-    for (path, sha) in sorted_entries {
-        writeln!(output, "{}\t{}", path.display(), sha)?;
     }
     Ok(())
 }
 
 /// Filters and logs duplicate files into clusters within the resolved DupesQ file
-pub fn generate_dupes_output(sha_map: &HashMap<String, Vec<PathBuf>>, output_path: &Path) -> io::Result<()> {
+pub fn generate_dupes_output(
+    sha_map: &HashMap<String, Vec<PathBuf>>,
+    output_path: &Path,
+) -> io::Result<()> {
     let mut output = File::create(output_path)?;
 
     let mut duplicate_groups: Vec<(String, Vec<PathBuf>)> = sha_map
@@ -90,4 +106,3 @@ pub fn generate_dupes_output(sha_map: &HashMap<String, Vec<PathBuf>>, output_pat
     }
     Ok(())
 }
-

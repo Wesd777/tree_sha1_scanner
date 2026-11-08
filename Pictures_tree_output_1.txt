@@ -1,0 +1,13 @@
+Pictures/
+  Docs/
+  EVisa/
+  Haruna screenshots/
+  Headshot May 2022.jpg : 907ba1bba0c2cb82bc7247c4a8f4ecc0a115156f
+  Numbers/
+  OKC/
+  POF/
+  Phil_Boi_Thu at Pagoda.JPG : db13822085a1f5f3d199aa5fd316d5fec1e49f55
+  Phil_Noi_Thu 2013.JPG : db13822085a1f5f3d199aa5fd316d5fec1e49f55
+  Seek/
+  VCUP/
+  Visa_headshot_2022.jpg : 907ba1bba0c2cb82bc7247c4a8f4ecc0a115156f

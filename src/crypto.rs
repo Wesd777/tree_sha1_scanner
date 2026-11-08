@@ -6,9 +6,10 @@ use std::path::Path;
 /// Helper function to compute the SHA-1 checksum hex string using sha1
 pub fn compute_sha1(path: &Path) -> io::Result<String> {
     let file = File::open(path)?;
-    let mut reader = BufReader::new(file);
+    // Optimized internal buffer capacity to match OS page boundaries
+    let mut reader = BufReader::with_capacity(65536, file);
     let mut hasher = Sha1::new();
-    let mut buffer = [0u8; 8192];
+    let mut buffer = [0u8; 65536];
 
     loop {
         let count = reader.read(&mut buffer)?;
@@ -19,8 +20,12 @@ pub fn compute_sha1(path: &Path) -> io::Result<String> {
     }
 
     let digest = hasher.finalize();
-    let hex_string = digest.iter().map(|b| format!("{:02x}", b)).collect();
+
+    // Performance fix: Allocate exactly 40 chars for SHA-1 to eliminate heap reallocations
+    let mut hex_string = String::with_capacity(40);
+    for byte in digest {
+        hex_string.push_str(&format!("{:02x}", byte));
+    }
 
     Ok(hex_string)
 }
-

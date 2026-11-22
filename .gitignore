@@ -1,10 +1,7 @@
-/target
+		/target
 **/*.rs.bk
-Cargo.lock
 
 # Editor backup files
 *~
 *.bak
 *.old
-
-structure.txt

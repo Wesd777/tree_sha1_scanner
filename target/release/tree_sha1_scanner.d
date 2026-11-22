@@ -1,0 +1,1 @@
+/home/phweda/Rust/tree_sha1_scanner/target/release/tree_sha1_scanner: /home/phweda/Rust/tree_sha1_scanner/src/app.rs /home/phweda/Rust/tree_sha1_scanner/src/crypto.rs /home/phweda/Rust/tree_sha1_scanner/src/main.rs /home/phweda/Rust/tree_sha1_scanner/src/reports.rs /home/phweda/Rust/tree_sha1_scanner/src/utils.rs

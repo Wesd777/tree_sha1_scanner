@@ -1,6 +1,6 @@
 [package]
 name = "tree_sha1_scanner"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -9,11 +9,11 @@ sha1 = "0.11"
 clap = { version = "4.0", features = ["derive"] }
 rayon = "1.10"
 is-terminal = "0.4"
+indicatif = "0.18"
 
-[profile.release]
+[profile.release]	
 opt-level = 3
 lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
-

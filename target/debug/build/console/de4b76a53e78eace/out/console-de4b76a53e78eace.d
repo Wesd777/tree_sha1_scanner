@@ -1,0 +1,11 @@
+/home/phweda/Rust/tree_sha1_scanner/target/debug/build/console/de4b76a53e78eace/out/console-de4b76a53e78eace.d: /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/lib.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/common_term.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/kb.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/term.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/unix_term.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/utils.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/ansi.rs
+
+/home/phweda/Rust/tree_sha1_scanner/target/debug/build/console/de4b76a53e78eace/out/libconsole-de4b76a53e78eace.rmeta: /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/lib.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/common_term.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/kb.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/term.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/unix_term.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/utils.rs /home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/ansi.rs
+
+/home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/lib.rs:
+/home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/common_term.rs:
+/home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/kb.rs:
+/home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/term.rs:
+/home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/unix_term.rs:
+/home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/utils.rs:
+/home/phweda/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/console-0.16.6/src/ansi.rs:

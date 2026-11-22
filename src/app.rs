@@ -1,28 +1,42 @@
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 use walkdir::WalkDir;
+
+use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::crypto::compute_sha1;
 use crate::reports::{generate_dupes_output, generate_tree_output, generate_tsv_output};
 use crate::utils::get_unique_filename;
 
-pub fn run(target_dir: &Path, output_dir: Option<&Path>) -> io::Result<()> {
+fn normalize_extensions(raw: &[String]) -> HashSet<String> {
+    raw.iter()
+        .map(|s| s.trim().trim_start_matches('.').to_lowercase())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+pub fn run(
+    target_dir: &Path,
+    output_dir: Option<&Path>,
+    custom_types: &[String],
+) -> io::Result<()> {
     let start_time = std::time::Instant::now();
 
-    let media_extensions: HashSet<&str> = [
-        "jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", // Images
-        "mp4", "mkv", "avi", "mov", "flv", "wmv", "webm", // Videos
-        "mp3", "wav", "flac", "ogg", "m4a", "aac", // Audio
-    ]
-    .iter()
-    .cloned()
-    .collect();
+    // Determine the extension filter: use custom types if provided, otherwise defaults
+    let media_extensions: HashSet<String> = if custom_types.is_empty() {
+        [
+            "jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", // Images
+            "mp4", "mkv", "avi", "mov", "flv", "wmv", "webm", // Videos
+            "mp3", "wav", "flac", "ogg", "m4a", "aac", // Audio
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+    } else {
+        normalize_extensions(custom_types)
+    };
 
     let dir_name = target_dir
         .file_name()
@@ -31,39 +45,34 @@ pub fn run(target_dir: &Path, output_dir: Option<&Path>) -> io::Result<()> {
 
     println!("Scanning directory and indexing files by byte size...");
 
-    // 1. Collect and filter entries from WalkDir into a standard Vector
-    let entries: Vec<PathBuf> = WalkDir::new(target_dir)
+    // Collect entries and sizes in a single pass
+    let size_pairs: Vec<(u64, PathBuf)> = WalkDir::new(target_dir)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|entry| {
-            if entry.path().is_file() {
-                if let Some(ext) = entry.path().extension().and_then(|s| s.to_str()) {
-                    return media_extensions.contains(ext.to_lowercase().as_str());
-                }
+            let path = entry.path();
+            if !path.is_file() {
+                return false;
             }
-            false
+            path.extension()
+                .and_then(|s| s.to_str())
+                .map(|ext| media_extensions.contains(&ext.to_lowercase()))
+                .unwrap_or(false)
         })
-        .map(|entry| entry.path().to_path_buf())
-        .collect();
-
-    let discovered_count = entries.len();
-
-    // 2. Fetch metadata lengths in parallel using Rayon
-    let size_pairs: Vec<(u64, PathBuf)> = entries
-        .into_par_iter()
-        .filter_map(|path| {
-            if let Ok(metadata) = std::fs::metadata(&path) {
-                Some((metadata.len(), path))
-            } else {
-                None
-            }
+        .filter_map(|entry| {
+            let len = entry.metadata().ok()?.len();
+            Some((len, entry.path().to_path_buf()))
         })
         .collect();
 
-    // 3. Populate your final HashMap sequentially from the processed results
+    let discovered_count = size_pairs.len();
+
+    // Build both the size-grouped map and a per-path size lookup
     let mut files_by_size: HashMap<u64, Vec<PathBuf>> = HashMap::new();
-    for (size, path) in size_pairs {
-        files_by_size.entry(size).or_default().push(path);
+    let mut size_map: HashMap<PathBuf, u64> = HashMap::new();
+    for (size, path) in &size_pairs {
+        files_by_size.entry(*size).or_default().push(path.clone());
+        size_map.insert(path.clone(), *size);
     }
 
     // Filter out sizes that only belong to 1 single file
@@ -74,38 +83,27 @@ pub fn run(target_dir: &Path, output_dir: Option<&Path>) -> io::Result<()> {
         .collect();
 
     println!(
-        "Found {} total files. Matching sizes identified. Starting parallel hashing on {} candidates...", 
+        "Found {} total files. Matching sizes identified. Starting parallel hashing on {} candidates...",
         discovered_count,
         duplicate_candidates.len()
     );
 
-    let file_count = Arc::new(AtomicUsize::new(0));
-    let is_running = Arc::new(AtomicBool::new(true));
-
-    let ui_file_count = Arc::clone(&file_count);
-    let ui_is_running = Arc::clone(&is_running);
-    let ui_handle = thread::spawn(move || {
-        let spinner_frames = ['-', '\\', '|', '/'];
-        let mut frame_idx = 0;
-
-        while ui_is_running.load(Ordering::Relaxed) {
-            let current_count = ui_file_count.load(Ordering::Relaxed);
-            let spinner_char = spinner_frames[frame_idx % spinner_frames.len()];
-
-            print!("\rFiles processed: {} {}", current_count, spinner_char);
-            let _ = io::stdout().flush();
-
-            frame_idx += 1;
-            thread::sleep(Duration::from_millis(250));
-        }
+    // Indicatif progress bar 
+    let progress = ProgressBar::new(duplicate_candidates.len() as u64);
+    let style = ProgressStyle::with_template(
+        "{bar:40.cyan/blue} {pos}/{len} ({percent}%) [{elapsed_precise}]",
+    );
+    progress.set_style(match style {
+        Ok(s) => s.progress_chars("=>-"),
+        Err(_) => ProgressStyle::with_template("{bar} {pos}/{len}").unwrap_or_else(|_| ProgressStyle::default_bar()),
     });
 
-    // LOCK-FREE EXTRACTION: Threads build localized maps and merge them up efficiently
+    // LOCK-FREE EXTRACTION: Threads build localized maps and merge them
     let sha_map: HashMap<String, Vec<PathBuf>> = duplicate_candidates
         .par_iter()
         .filter_map(|path| {
             if let Ok(sha1_hex) = compute_sha1(path) {
-                file_count.fetch_add(1, Ordering::Relaxed);
+                progress.inc(1);
                 Some((sha1_hex, path.clone()))
             } else {
                 None
@@ -128,15 +126,7 @@ pub fn run(target_dir: &Path, output_dir: Option<&Path>) -> io::Result<()> {
             },
         );
 
-    is_running.store(false, Ordering::Relaxed);
-    let _ = ui_handle.join();
-
-    print!("\r                                           ");
-    let total_processed = file_count.load(Ordering::Relaxed);
-    println!(
-        "\rScan complete! Total files processed: {}",
-        total_processed
-    );
+    progress.finish_with_message("Hashing complete.");
 
     // Compute unique filenames while mitigating OS namespace collisions
     let tree_filename = get_unique_filename(output_dir, &dir_name, "tree_output", "txt");
@@ -145,13 +135,19 @@ pub fn run(target_dir: &Path, output_dir: Option<&Path>) -> io::Result<()> {
 
     println!("Generating report files...");
 
-    let dupes_count = sha_map.values().filter(|paths| paths.len() > 1).count();
+    let dupes_file_count: usize = sha_map
+        .values()
+        .filter(|paths| paths.len() > 1)
+        .map(|paths| paths.len())
+        .sum();
 
-    generate_tree_output(target_dir, &sha_map, &tree_filename)?;
-    if dupes_count > 0 {
-        generate_tsv_output(&sha_map, &tsv_filename)?;
+    let dupes_group_count = sha_map.values().filter(|paths| paths.len() > 1).count();
+
+    generate_tree_output(target_dir, &sha_map, &size_map, &tree_filename)?;
+    if dupes_group_count > 0 {
+        generate_tsv_output(&sha_map, &size_map, &tsv_filename)?;
     }
-    generate_dupes_output(&sha_map, &dupes_filename)?;
+    generate_dupes_output(&sha_map, &size_map, &dupes_filename)?;
 
     let total_secs = start_time.elapsed().as_secs();
     let hours = total_secs / 3600;
@@ -162,9 +158,12 @@ pub fn run(target_dir: &Path, output_dir: Option<&Path>) -> io::Result<()> {
         "\nAll operations completed successfully in {:02}:{:02}:{:02}:",
         hours, minutes, seconds
     );
-    println!(" -> {} dupes found", dupes_count);
+    println!(
+        " -> {} duplicate files in {} group(s)",
+        dupes_file_count, dupes_group_count
+    );
     println!(" -> Tree layout: {}", tree_filename.display());
-    if dupes_count > 0 {
+    if dupes_group_count > 0 {
         println!(" -> TSV Registry: {}", tsv_filename.display());
     }
     println!(" -> Duplicates:  {}", dupes_filename.display());

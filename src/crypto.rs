@@ -1,31 +1,36 @@
 use sha1::{Digest, Sha1};
 use std::fs::File;
-use std::io::{self, BufReader, Read};
+use std::io::{self, Read};
 use std::path::Path;
 
-/// Helper function to compute the SHA-1 checksum hex string using sha1
-pub fn compute_sha1(path: &Path) -> io::Result<String> {
-    let file = File::open(path)?;
-    // Optimized internal buffer capacity to match OS page boundaries
-    let mut reader = BufReader::with_capacity(65536, file);
-    let mut hasher = Sha1::new();
-    let mut buffer = [0u8; 65536];
+const HEX_CHARS: &[u8; 16] = b"0123456789abcdef";
 
-    loop {
-        let count = reader.read(&mut buffer)?;
-        if count == 0 {
-            break;
+pub fn compute_sha1(path: &Path) -> io::Result<String> {
+    let mut file = File::open(path)?;
+    let meta = file.metadata()?;
+    let mut hasher = Sha1::new();
+
+    if meta.is_file() && (1..=(1 << 22)).contains(&meta.len()) {
+        let mut buf = vec![0u8; meta.len() as usize];
+        file.read_exact(&mut buf)?;
+        hasher.update(&buf);
+    } else {
+        let mut chunk = vec![0u8; 1 << 22];
+        loop {
+            match file.read(&mut chunk) {
+                Ok(0) => break,
+                Ok(n) => hasher.update(&chunk[..n]),
+                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                Err(e) => return Err(e),
+            }
         }
-        hasher.update(&buffer[..count]);
     }
 
     let digest = hasher.finalize();
-
-    // Performance fix: Allocate exactly 40 chars for SHA-1 to eliminate heap reallocations
-    let mut hex_string = String::with_capacity(40);
-    for byte in digest {
-        hex_string.push_str(&format!("{:02x}", byte));
+    let mut out = String::with_capacity(40);
+    for b in digest {
+        out.push(HEX_CHARS[(b >> 4) as usize] as char);
+        out.push(HEX_CHARS[(b & 0xf) as usize] as char);
     }
-
-    Ok(hex_string)
+    Ok(out)
 }

@@ -1,0 +1,26 @@
+    Checking typenum v1.20.1
+    Checking crossbeam-utils v0.8.23
+    Checking anstyle v1.0.14
+    Checking const-oid v0.10.3
+    Checking clap_lex v1.1.2
+    Checking strsim v0.11.1
+    Checking same-file v1.0.6
+    Checking either v1.19.0
+    Checking anstyle-parse v1.0.0
+    Checking libc v0.2.191
+    Checking walkdir v2.5.0
+    Checking anstream v1.0.0
+    Checking clap_builder v4.6.7
+    Checking crossbeam-epoch v0.9.21
+    Checking crossbeam-deque v0.8.8
+    Checking rayon-core v1.13.0
+    Checking hybrid-array v0.4.15
+    Checking is-terminal v0.4.17
+    Checking rayon v1.12.0
+    Checking block-buffer v0.12.1
+    Checking crypto-common v0.2.2
+    Checking clap v4.6.8
+    Checking digest v0.11.3
+    Checking sha1 v0.11.0
+    Checking tree_sha1_scanner v0.1.0 (/home/phweda/Rust/tree_sha1_scanner)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.93s

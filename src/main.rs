@@ -11,14 +11,14 @@ mod utils;
 #[derive(Parser, Debug)]
 #[command(
     name = "tree_sha1_scanner",
-    version = "0.1.0",
+    version,				// ← uses env!("CARGO_PKG_VERSION")
     author = "Wesd777 (https://github.com)",
     about = "A fast media duplicate scanner."
 )]
 pub struct Args {
     /// Path to the target directory
     #[arg(short, long, value_name = "DIR")]
-    pub directory: Option<PathBuf>, // Option configuration for interactive fallback
+    pub directory: Option<PathBuf>,
 
     /// Optional path to save report output files (defaults to a 'scans' folder inside the target directory)
     #[arg(short, long, value_name = "OUTPUT_DIR")]
@@ -27,10 +27,13 @@ pub struct Args {
     /// Run in single-threaded minimum performance mode to save system resources
     #[arg(long)]
     pub min: bool,
+
+    /// Custom file extensions to scan (comma-separated or repeated; e.g. --types mp4,mkv or --types .MKV --types .avi)
+    #[arg(short = 't', long = "types", value_name = "EXTENSIONS", value_delimiter = ',')]
+    pub types: Vec<String>,
 }
 
 fn main() -> io::Result<()> {
-    // Detect if the program was double-clicked launched
     let standard_input_attached = io::stdin().is_terminal();
     let no_arguments_passed = std::env::args().len() == 1;
     let is_graphical_double_click = no_arguments_passed && standard_input_attached;
@@ -55,8 +58,9 @@ fn main() -> io::Result<()> {
 
         Args {
             directory: Some(PathBuf::from(trimmed)),
-            output: None, // Will default to target_directory/scans below
+            output: None,
             min: false,
+            types: Vec::new(),
         }
     } else if no_arguments_passed && !standard_input_attached {
         eprintln!("Error: This application must be run inside a terminal environment.");
@@ -66,7 +70,6 @@ fn main() -> io::Result<()> {
         Args::parse()
     };
 
-    // Extract target path safely
     let target_directory = match args.directory.take() {
         Some(path) => path,
         None => {
@@ -91,13 +94,11 @@ fn main() -> io::Result<()> {
         std::process::exit(1);
     }
 
-    // If provided via --output, use it. Otherwise, default to target_directory/dupe_scans globally.
     let resolved_output_dir = match args.output {
         Some(out_path) => out_path,
         None => target_directory.join("dupe_scans"),
     };
 
-    // Guarantee directory existence safely
     if !resolved_output_dir.exists() {
         std::fs::create_dir_all(&resolved_output_dir)?;
     }
@@ -111,14 +112,20 @@ fn main() -> io::Result<()> {
             .unwrap_or(1)
     };
 
-    rayon::ThreadPoolBuilder::new()
+    // Propagate the error instead of panicking; if a global pool already exists
+    // (should not happen in a single-shot CLI), fall back to the default pool.
+    if let Err(e) = rayon::ThreadPoolBuilder::new()
         .num_threads(thread_count)
         .build_global()
-        .unwrap();
+    {
+        eprintln!(
+            "Warning: could not configure Rayon thread pool ({}); using default.",
+            e
+        );
+    }
 
-    let result = app::run(&target_directory, Some(&resolved_output_dir));
+    let result = app::run(&target_directory, Some(&resolved_output_dir), &args.types);
 
-    // Keep window open at the end if we used interactive terminal prompting
     if is_graphical_double_click {
         print!("Press Enter to close window...");
         io::stdout().flush()?;

@@ -111,14 +111,14 @@ pub fn run(
             }
         })
         .fold(
-            || HashMap::<String, Vec<PathBuf>>::new(),
+            HashMap::<String, Vec<PathBuf>>::new,
             |mut local_map, (sha1, path)| {
                 local_map.entry(sha1).or_default().push(path);
                 local_map
             },
         )
         .reduce(
-            || HashMap::<String, Vec<PathBuf>>::new(),
+            HashMap::<String, Vec<PathBuf>>::new,
             |mut map_a, map_b| {
                 for (sha1, paths) in map_b {
                     map_a.entry(sha1).or_default().extend(paths);

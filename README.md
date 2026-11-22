@@ -19,7 +19,7 @@ Easy-to-read reports show where the duplicates are, how big they are, and how mu
 
 ## Usage
 * From command line or terminal run by passing your target directory as an argument.
-* Double-click will spawn a terminal asking for the directory path. **Untested on MacOS**
+* *_Double-click_* will spawn a terminal asking for the directory path. **Untested on MacOS**
 
 ``` 
 **Windows Command Prompt / CMD**

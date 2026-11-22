@@ -117,15 +117,12 @@ pub fn run(
                 local_map
             },
         )
-        .reduce(
-            HashMap::<String, Vec<PathBuf>>::new,
-            |mut map_a, map_b| {
-                for (sha1, paths) in map_b {
-                    map_a.entry(sha1).or_default().extend(paths);
-                }
-                map_a
-            },
-        );
+        .reduce(HashMap::<String, Vec<PathBuf>>::new, |mut map_a, map_b| {
+            for (sha1, paths) in map_b {
+                map_a.entry(sha1).or_default().extend(paths);
+            }
+            map_a
+        });
 
     progress.finish_with_message("Hashing complete.");
 

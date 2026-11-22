@@ -35,10 +35,7 @@ pub fn get_unique_filename(
     extension: &str,
 ) -> PathBuf {
     let sanitized_dir = dir_name
-        .replace(
-            ['?', '*', ':', '"', '<', '>', '|', '\\', '/'],
-            "_",
-        )
+        .replace(['?', '*', ':', '"', '<', '>', '|', '\\', '/'], "_")
         // Windows forbids trailing spaces and periods in file/folder names
         .trim_end_matches([' ', '.'])
         .to_string();

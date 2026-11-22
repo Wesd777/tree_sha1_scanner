@@ -59,7 +59,7 @@ pub fn generate_tsv_output(
 ) -> io::Result<()> {
     let mut output = File::create(output_path)?;
 
-     writeln!(output, "Size\tFile Path\tSHA1")?;
+    writeln!(output, "Size\tFile Path\tSHA1")?;
 
     // Collect groups that contain duplicates
     let mut grouped_entries: Vec<(&String, &Vec<PathBuf>)> = sha_map
@@ -69,8 +69,14 @@ pub fn generate_tsv_output(
 
     // Sort descending by total group size (sum of all file sizes in the group)
     grouped_entries.sort_by(|a, b| {
-        let size_a: u64 = a.1.iter().map(|p| size_map.get(p).copied().unwrap_or(0)).sum();
-        let size_b: u64 = b.1.iter().map(|p| size_map.get(p).copied().unwrap_or(0)).sum();
+        let size_a: u64 =
+            a.1.iter()
+                .map(|p| size_map.get(p).copied().unwrap_or(0))
+                .sum();
+        let size_b: u64 =
+            b.1.iter()
+                .map(|p| size_map.get(p).copied().unwrap_or(0))
+                .sum();
         size_b.cmp(&size_a)
     });
 
@@ -104,14 +110,18 @@ pub fn generate_dupes_output(
     let mut output = io::BufWriter::with_capacity(64 * 1024, file);
 
     // Collect only duplicate groups (no clone of paths yet)
-    let mut dup_groups: Vec<(&String, &Vec<PathBuf>)> = sha_map
-        .iter()
-        .filter(|(_, p)| p.len() > 1)
-        .collect();
+    let mut dup_groups: Vec<(&String, &Vec<PathBuf>)> =
+        sha_map.iter().filter(|(_, p)| p.len() > 1).collect();
 
     dup_groups.sort_by(|a, b| {
-        let ta: u64 = a.1.iter().map(|p| size_map.get(p).copied().unwrap_or(0)).sum();
-        let tb: u64 = b.1.iter().map(|p| size_map.get(p).copied().unwrap_or(0)).sum();
+        let ta: u64 =
+            a.1.iter()
+                .map(|p| size_map.get(p).copied().unwrap_or(0))
+                .sum();
+        let tb: u64 =
+            b.1.iter()
+                .map(|p| size_map.get(p).copied().unwrap_or(0))
+                .sum();
         tb.cmp(&ta)
     });
 
@@ -121,13 +131,22 @@ pub fn generate_dupes_output(
     }
 
     for (index, (sha, paths)) in dup_groups.iter().enumerate() {
-        let total: u64 = paths.iter().map(|p| size_map.get(p).copied().unwrap_or(0)).sum();
-        let single_size: u64 = paths.first().and_then(|p| size_map.get(p).copied()).unwrap_or(0);
+        let total: u64 = paths
+            .iter()
+            .map(|p| size_map.get(p).copied().unwrap_or(0))
+            .sum();
+        let single_size: u64 = paths
+            .first()
+            .and_then(|p| size_map.get(p).copied())
+            .unwrap_or(0);
         let savings: u64 = total.saturating_sub(single_size);
         writeln!(
             output,
             "Duplicate Group #{}: [SHA-1: {}] (Total: {}) (Total Savings: {})",
-            index, sha, format_size(total), format_size(savings)
+            index,
+            sha,
+            format_size(total),
+            format_size(savings)
         )?;
 
         // Sort by size desc — borrow-only, no clone

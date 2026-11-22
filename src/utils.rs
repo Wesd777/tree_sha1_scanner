@@ -108,10 +108,9 @@ fn is_windows_reserved_name(name: &str) -> bool {
     let stem = name.split('.').next().unwrap_or(name);
     let upper = stem.to_uppercase();
 
-    matches!(upper.as_str(),
-        "CON" | "PRN" | "AUX" | "NUL" | "CLOCK$"
-    ) || (upper.len() == 4
-        && (upper.starts_with("COM") || upper.starts_with("LPT"))
-        && upper.as_bytes()[3].is_ascii_digit()
-        && upper.as_bytes()[3] != b'0')
+    matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL" | "CLOCK$")
+        || (upper.len() == 4
+            && (upper.starts_with("COM") || upper.starts_with("LPT"))
+            && upper.as_bytes()[3].is_ascii_digit()
+            && upper.as_bytes()[3] != b'0')
 }

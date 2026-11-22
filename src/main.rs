@@ -29,7 +29,12 @@ pub struct Args {
     pub min: bool,
 
     /// Custom file extensions to scan (comma-separated or repeated; e.g. --types mp4,mkv or --types .MKV --types .avi)
-    #[arg(short = 't', long = "types", value_name = "EXTENSIONS", value_delimiter = ',')]
+    #[arg(
+        short = 't',
+        long = "types",
+        value_name = "EXTENSIONS",
+        value_delimiter = ','
+    )]
     pub types: Vec<String>,
 }
 

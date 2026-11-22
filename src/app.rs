@@ -88,14 +88,15 @@ pub fn run(
         duplicate_candidates.len()
     );
 
-    // Indicatif progress bar 
+    // Indicatif progress bar
     let progress = ProgressBar::new(duplicate_candidates.len() as u64);
     let style = ProgressStyle::with_template(
         "{bar:40.cyan/blue} {pos}/{len} ({percent}%) [{elapsed_precise}]",
     );
     progress.set_style(match style {
         Ok(s) => s.progress_chars("=>-"),
-        Err(_) => ProgressStyle::with_template("{bar} {pos}/{len}").unwrap_or_else(|_| ProgressStyle::default_bar()),
+        Err(_) => ProgressStyle::with_template("{bar} {pos}/{len}")
+            .unwrap_or_else(|_| ProgressStyle::default_bar()),
     });
 
     // LOCK-FREE EXTRACTION: Threads build localized maps and merge them

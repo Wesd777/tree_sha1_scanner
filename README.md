@@ -21,7 +21,8 @@ Easy-to-read reports show where the duplicates are, how big they are, and how mu
 * From command line or terminal run by passing your target directory as an argument.
 * Double-click will spawn a terminal asking for the directory path. **Untested on MacOS**
 
-**Windows Command Prompt / CMD**
+``` **Windows Command Prompt / CMD**
+
 # Standard Run (Uses optimized multi-threading with balance)
 tree_sha1_scanner.exe --directory "C:\path\to\target_directory"
 
@@ -36,6 +37,7 @@ tree_sha1_scanner.exe --directory "C:\path\to\target_directory" --types mp4,mkv,
 
 # Show help
 tree_sha1_scanner.exe --help
+```
 
 ```bash
 # Standard Run (Uses optimized multi-threading with balance)
